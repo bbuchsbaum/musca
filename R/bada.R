@@ -120,7 +120,7 @@ bada <- function(y, subject, data, ncomp=2, preproc=center(), resdim=20, rescomp
     s$x <- s$x - Xc[levs,,drop=FALSE]
     s
   })
-  browser()
+  #browser()
   Xall <- do.call(rbind, residual_strata %>% purrr::map( ~ .x$x))
   
   pca_resid <- pca(Xall, ncomp=residcomp)
