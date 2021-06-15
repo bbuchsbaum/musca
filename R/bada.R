@@ -2,74 +2,17 @@
 #  do.call(rbind, dat %>% pull(.obs) %>% purrr::map( ~ .x()))
 #}
 
-between_class_scatter <- function(X, Y, mu) {
-  p <- ncol(X)
-  Y <- droplevels(Y)
-  levs <- levels(Y)
-  
-  gmeans <- group_means(Y,X)
-  gmeans <- sweep(gmeans, 2, mu, "-")
-  
-  n <- tabulate(Y)
-  
-  res <- lapply(seq_along(levs), function(i) {
-    n[i] * tcrossprod(gmeans[i,], gmeans[i,])
-  })
-  
-  Reduce("+", res)
-  
-}
 
 
-pooled_scatter <- function(X, Y) {
-  ina <- as.integer(droplevels(Y))
-  s <- crossprod(X)
-  ni <- sqrt(tabulate(ina))
-  mi <- rowsum(X, ina)/ni
-  k <- length(ni)
-  denom <- dim(X)[1] - k
-  for (i in 1:k) s <- s - tcrossprod(mi[i, ])
-  s
-}
 
-within_class_scatter <- function(X, Y) {
-  pooled_scatter(X,Y)
-}
 
-## add a version that uses Sw as within subject covariance matrix
-
-#' Barycentric Discriminant Analysis
-#' 
-#' A component technique that maximizes the between group variance over a set of variables. 
-#' 
 #' @import chk
-#' @param formula the fixed effects formula
-#' @param subject the subject formula
-#' @param data the `multidesign` containing the X and Y data.
-#'
-#' @param ncomp number of components to estimate
-#' @param preproc pre-processing function, defaults to \code{center}
-#' @param A the column constraints
-#' @param M the row constraints
+#' @param resdim pca dimensionality for residual analysis (only relevant if `rescomp` > 0)
+#' @param rescomp number of final residual components (default = 0, no residual aanalysis)
 #' @param ... arguments to pass through
-#' 
-#' @details 
-#' 
-#' The \code{subject} argument can be used to model multilevel structure.
-#' 
-#' @references
-#' Abdi, H., Williams, L. J., & Bera, M. (2017). Barycentric discriminant analysis. \emph{Encyclopedia of Social Network Analysis and Mining}, 1-20.
-#' 
-#' 
+#' @rdname bada
 #' @export
-#' @examples 
-#' 
-#' X <- matrix(rnorm(50*100), 50, 100)
-#' Y <- tibble(condition=rep(letters[1:5], 10), subject=rep(1:5, each=10))
-#' 
-#' des <- multivarious::multidesign(X,Y)
-#' bada(condition, subject=subject, data=des)
-bada <- function(y, subject, data, ncomp=2, preproc=center(), resdim=20, rescomp=2, ...) {
+bada.multidesign <- function(data, y, subject, preproc=center(), ncomp=2,resdim=20, rescomp=0, ...) {
   y <- rlang::enquo(y)
   subject <- rlang::enquo(subject)
   
@@ -126,49 +69,59 @@ bada <- function(y, subject, data, ncomp=2, preproc=center(), resdim=20, rescomp
   
   ## group barycenters
   Xc <-Reduce("+", lapply(Dc, "[[", "x"))/length(Dc)
-  ## dangerous, requires consistent ordering. Better to extract from design
+  
+  ## requires consistent ordering. Better to extract from design
   row.names(Xc) <- label_set
   ncomp <- min(ncomp, nrow(Xc))
 
   ## group pca
   pca_group <- pca(Xc, ncomp=ncomp, preproc=pass())
   
-  residual_strata <- strata %>% purrr::map(function(s) {
-    levs <- s$design %>% pull(!!y)
-    s$x <- s$x - Xc[levs,,drop=FALSE]
-    s
-  })
   
-
-  Xresid <- do.call(rbind, residual_strata %>% purrr::map( ~ .x$x))
+  ## residual analysis
+  if (rescomp > 0) {
+    chk::chk_true(resdim > 0)
+    residual_strata <- strata %>% purrr::map(function(s) {
+      levs <- s$design %>% pull(!!y)
+      s$x <- s$x - Xc[levs,,drop=FALSE]
+      s
+    })
   
-  pca_resid <- pca(Xresid, ncomp=resdim, method="irlba")
-  Xpca_resid <- scores(pca_resid)
+    Xresid <- do.call(rbind, residual_strata %>% purrr::map( ~ .x$x))
   
-  Sw <- within_class_scatter(Xpca_resid, interaction(subjects, labels))
-  Sb <- between_class_scatter(Xpca_resid, interaction(subjects, labels), 
+    pca_resid <- pca(Xresid, ncomp=resdim, method="irlba")
+    Xpca_resid <- scores(pca_resid)
+  
+    Sw <- within_class_scatter(Xpca_resid, interaction(subjects, labels))
+    Sb <- between_class_scatter(Xpca_resid, interaction(subjects, labels), 
                               colMeans(Xpca_resid))
   
-  eigout <- eigen(solve(Sw, Sb))
-  #scores <- Xpca_resid %*% eigout$vectors
-  resid_v <- pca_resid$v %*% eigout$vectors
-  v <- cbind(pca_group$v, resid_v)
-  vq <- qr(v)
-  v <- qr.Q(vq)
+    eigout <- eigen(solve(Sw, Sb))
+    #scores <- Xpca_resid %*% eigout$vectors
+    resid_v <- pca_resid$v %*% eigout$vectors
+    v <- cbind(pca_group$v, resid_v)
+    vq <- qr(v)
+    v <- qr.Q(vq)
+  } else {
+    resdim <- 0
+    rescomp <- 0
+    v <- pca_group$v
+  }
   
   ## compute projections, one subject at a time.
   s <- do.call(rbind, strata %>% purrr::map(function(s) {
     s$x %*% v
   }))
   
-  #s <- Xall %*% v
-
   proc <- multivarious:::concat_pre_processors(proclist, block_indices)
   
-  multivarious:::discriminant_projector(v=v, s=s, apply(s,2,sd), 
+  multivarious:::discriminant_projector(v=v, s=s, 
+                                        sdev=apply(s,2,sd), 
                                         preproc = proc,
                                         proclist = proclist,
                                         labels=labels, 
+                                        resdim=resdim,
+                                        rescomp=rescomp,
                                         subjects=subjects,
                                         barycenters=Xc,
                                         block_indices=block_indices,
@@ -178,24 +131,28 @@ bada <- function(y, subject, data, ncomp=2, preproc=center(), resdim=20, rescomp
 
 
 #' @export
-reprocess.bada <- function(x, new_data, colind=NULL, subject=NULL) {
-  if (is.null(colind) && is.null(subject)) {
+#' 
+reprocess.bada <- function(x, new_data, colind=NULL, block=NULL) {
+  if (is.null(colind) && is.null(block)) {
+    ## how to pre-process wheen you don't know the subject?
+    ## we pre-process every way and average.
     chk::chk_equal(ncol(new_data), shape(x)[1])
+    
     ## pre-process every which way...
     Reduce("+", lapply(seq_along(x$block_indices), function(i) {
       apply_transform(x$preproc, new_data, colind=x$block_indices[[i]])
     }))/length(x$block_indices)
     
-  } else if (!is.null(subject)) {
+  } else if (!is.null(block)) {
     ## pre-process along one block
-    chk::chk_character(subject)
+    chk::chk_character(block)
     chk::chk_equal(ncol(new_data), shape(x)[1])
-    sind <- x$block_indices[[subject]]
+    sind <- x$block_indices[[block]]
     if (!is.null(colind)) {
       ## relative subset using colind
-      cind <- sind[colind]
+      sind <- sind[colind]
     }
-    apply_transform(x$preproc, new_data, colind=cind)
+    apply_transform(x$preproc, new_data, colind=sind)
   } else {
     ## colind not null. pre-process every which way using colind per block
     Reduce("+", lapply(seq_along(x$block_indices), function(i) {
@@ -205,20 +162,23 @@ reprocess.bada <- function(x, new_data, colind=NULL, subject=NULL) {
   
 }
 
-#' project 
+#' new sample projection
 #' 
-#' @param subject the `character` id for the subject to project on. 
-#' This is required for subject-specific pre-processing. 
+#' Project one or more samples of onto a subspace.
+#' 
+#' @inheritParams multivarious::project
+#' 
+#' @param block the `character` id for the subject/block to project on. 
+#' This is required for block-specific pre-processing. 
 #' If missing, the group average pre-processing parameters are used.
 #' 
 #' @export
-#' @rdname project
-project.bada <- function(x, new_data,subject) {
-  if (missing(subject)) {
+project.bada <- function(x, new_data, block) {
+  if (missing(block)) {
     NextMethod(x,new_data)
   } else {
     #Xp <- multivarious::apply_transform(preproc, new_data)
-    reprocess(x, new_data, subject=subject) %*% coef(x)
+    reprocess(x, new_data, block=block) %*% coef(x)
   }
 }
 
