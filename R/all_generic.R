@@ -85,3 +85,9 @@ project_cov <- function(x, new_data, ...) UseMethod("project_cov")
 multivarious::project
 
 
+#' @importFrom multivarious reprocess
+#' @export
+#' @rdname project
+multivarious::reprocess
+
+
