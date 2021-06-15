@@ -68,12 +68,20 @@ mfa <- function(data, preproc, ncomp, normalization, A, M) UseMethod("mfa")
 #' @param 
 kema <- function(data, y, preproc, ncomp, knn, sigma, u, kernel, sample_frac, dweight, ...) UseMethod("kema")
 
-
+#' project covariance matrix
+#' 
 #' project a new covariance matrix onto a component fit
 #' 
 #' @param x the model fit
 #' @param new_data the covariance matrix
+#' @param ... extra args
 #' @export
 project_cov <- function(x, new_data, ...) UseMethod("project_cov")
+
+
+#' @importFrom multivarious project
+#' @export
+#' @rdname project
+multivarious::project
 
 

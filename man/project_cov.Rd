@@ -2,7 +2,7 @@
 % Please edit documentation in R/all_generic.R
 \name{project_cov}
 \alias{project_cov}
-\title{project a new covariance matrix onto a component fit}
+\title{project covariance matrix}
 \usage{
 project_cov(x, new_data, ...)
 }
@@ -10,6 +10,8 @@ project_cov(x, new_data, ...)
 \item{x}{the model fit}
 
 \item{new_data}{the covariance matrix}
+
+\item{...}{extra args}
 }
 \description{
 project a new covariance matrix onto a component fit
