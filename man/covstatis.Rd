@@ -4,7 +4,7 @@
 \alias{covstatis}
 \title{Statis for covariance matrices}
 \usage{
-covstatis(data, ncomp, normalize, dcenter)
+covstatis(data, ncomp, normalize, dcenter, ...)
 }
 \arguments{
 \item{data}{a set of covariance matrices}
