@@ -98,7 +98,7 @@ project_cov.covstatis <- function(x, new_data) {
   assertthat::assert_that(nrow(new_data) == nrow(x$v), msg="`new_data` must be symmetric")
   assertthat::assert_that(isSymmetric(new_data), msg="`new_data` must be symmetric")
   
-  if (x$double_center) {
+  if (x$dcenter) {
     new_data <- double_center(new_data)
   }
   
