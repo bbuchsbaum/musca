@@ -95,6 +95,7 @@ covstatis.list <- function(data, ncomp=2, normalize=TRUE, dcenter=TRUE, labels=N
 
 #' @export
 project_cov.covstatis <- function(x, new_data) {
+  new_data <- as.matrix(new_data)
   assertthat::assert_that(nrow(new_data) == nrow(x$v), msg="`new_data` must be symmetric")
   assertthat::assert_that(isSymmetric(new_data), msg="`new_data` must be symmetric")
   
