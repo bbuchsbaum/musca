@@ -19,8 +19,13 @@ Imports:
   genpca,
   dplyr,
   glmnet,
-  cluster
+  cluster,
+  irlba,
+  pls,
+  rsvd,
+  svd
 Remotes:
   bbuchsbaum/multivarious,
   bbuchsbaum/genpca,
-  bbuchsbaum/multidesign
+  bbuchsbaum/multidesign,
+  bbuchsbaum/deflist
