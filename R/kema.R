@@ -327,16 +327,16 @@ kema_fit <- function(strata, proc, ncomp, knn, sigma, u, y, labels, kernel, samp
 
 
 #' @import glmnet
-kema_solve <- function(strata, Z, Ks, Lap, kernel_indices, specreg, ncomp, u, dweight, sample_frac) {
+kema_solve <- function(strata, Z, Ks, Lap, kernel_indices, specreg, ncomp, u, dweight, sample_frac, lambda=.0001) {
   if (specreg) {
     A <- Lap$Ls - dweight*(Lap$Lr + Lap$Ld)
     decomp <- PRIMME::eigs_sym(u*Lap$L + (1-u)*A, NEig=ncomp+1, which="SA")
     Y <- decomp$vectors[,1:ncomp]
     
     if (sample_frac < 1) {
-      rfit <- glmnet(t(Z), Y, family = "mgaussian", alpha=0, lambda=.001)
+      rfit <- glmnet(t(Z), Y, family = "mgaussian", alpha=0, lambda=lambda)
     } else {
-      rfit <- glmnet(Z, Y, family = "mgaussian", alpha=0, lambda=.001)
+      rfit <- glmnet(Z, Y, family = "mgaussian", alpha=0, lambda=lambda)
     }
     cfs <- coef(rfit)
     cfs <- do.call(cbind, cfs)[-1,,drop=FALSE]

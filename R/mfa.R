@@ -35,7 +35,12 @@ normalization_factors <- function(blocks, type=c("MFA", "RV", "RV2", "None", "Fr
   }
 }
 
-
+mfa.list <- function(data, preproc=center(), ncomp=2,
+                     normalization=c("MFA", "RV", "None", "Frob", "custom"), 
+                     M=NULL, A=NULL, ...) {
+  data <- multiblock(data)
+  mfa.multiblock(data, preproc, ncomp, normalization, M, A,...)
+}
 
 
 #' multiple factor analysis
@@ -68,7 +73,7 @@ normalization_factors <- function(blocks, type=c("MFA", "RV", "RV2", "None", "Fr
 #' pred <- predict(cfier, X[1:2,])
 #' cfier2 <- classifier(res, new_data=X[[2]], labels=labs, colind=res$block_indices[[2]])
 #' pred2 <- predict(cfier2, X[1:2,res$block_indices[[2]]])
-mfa.list <- function(data, preproc=center(), ncomp=2,
+mfa.multiblock <- function(data, preproc=center(), ncomp=2,
                 normalization=c("MFA", "RV", "None", "Frob", "custom"), 
                 M=NULL, A=NULL, ...) {
   
