@@ -87,8 +87,12 @@ class_medoids <- function(X, L) {
   L <- as.factor(L)
   sl <- split(1:length(L), L)
   ids <- sapply(sl, function(sidx) {
-    cp <- cluster::pam(X[sidx,], k=1, metric="manhattan")
-    sidx[cp$id.med]
+    if (length(sidx) <= 2) {
+      sidx[1]
+    } else {
+      cp <- cluster::pam(X[sidx,], k=1, metric="manhattan")
+      sidx[cp$id.med]
+    }
   })
   
   ids
@@ -155,7 +159,10 @@ compute_between_graph <- function(strata, y) {
   
   dlabels <- lapply(strata, function(s) {
     labs <- s$design %>% select(!!y) %>% pull(!!y)
+    
+    ## find the medoid member of each class
     meds <- sort(class_medoids(s$x, labs))
+    
     medlabels <- rep(NA, length(labs))
     medlabels[meds] <- names(meds)
     medlabels
@@ -320,7 +327,8 @@ kema_fit <- function(strata, proc, ncomp, knn, sigma, u, y, labels, kernel, samp
   ## compute laplacians
   Lap <- compute_laplacians(G$Ws,G$Wr,G$W,G$Wd, specreg)
   
-  kemfit <- kema_solve(strata, Z, Ks, Lap, kernel_indices, specreg, ncomp, u, dweight, rweight, sample_frac)
+  kemfit <- kema_solve(strata, Z, Ks, Lap, kernel_indices, specreg, ncomp, u, 
+                       dweight, rweight, sample_frac)
 
   multivarious::multiblock_biprojector(
     v=kemfit$coef,
