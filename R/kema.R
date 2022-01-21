@@ -101,7 +101,7 @@ class_medoids <- function(X, L) {
 
 
 
-compute_local_similarity <- function(strata, y, knn, weight_mode, type, sigma) {
+compute_local_similarity <- function(strata, y, knn, weight_mode, type, sigma, repulsion=TRUE) {
   y <- rlang::enquo(y)
   Sl <- purrr::map(strata, function(x) {
     labs <- x$design %>% select(!!y) %>% pull(!!y)
@@ -114,8 +114,15 @@ compute_local_similarity <- function(strata, y, knn, weight_mode, type, sigma) {
     
     #labs <- labels[x$design$.index]
     cg <- neighborweights::class_graph(labs)
-    r <- neighborweights::repulsion_graph(g, cg, method="weighted")
-    list(G=adjacency(g), R=adjacency(r))
+    
+    if (repulsion) {
+      r <- neighborweights::repulsion_graph(g, cg, method="weighted")
+      list(G=adjacency(g), R=adjacency(r))
+    } else {
+      list(G=adjacency(g), R=sparseMatrix(length(labs), length(labs)))
+    }
+    
+    
   })
   
   Sl
@@ -210,10 +217,16 @@ normalize_graphs <- function(Sl, Ws, Wd) {
   Ws <- Ws/Sws * Sw
   
   Swr <- sum(Wr)
-  Wr <- Wr/Swr * Sw
+  
+  if (Swr > 0) {
+    Wr <- Wr/Swr * Sw
+  }
   
   Swd <- sum(Wd)
-  Wd <- Wd/Swd * Sw
+  
+  if (Swd > 0) {
+    Wd <- Wd/Swd * Sw
+  }
   
   list(W=W, Wr=Wr, Ws=Ws, Wd=Wd)
 }
@@ -303,18 +316,24 @@ kema_fit <- function(strata, proc, ncomp, knn, sigma, u, y, labels, kernel, samp
   
   y <- rlang::enquo(y)
   
+  
   ## data similarity
   Sl <- compute_local_similarity(strata, !!y, knn, 
                                  weight_mode="normalized", 
                                  type="normal",  
-                                 sigma=sigma)
+                                 sigma=sigma,
+                                 repulsion=rweight>0)
   
   
   ## class pull
   Ws <- neighborweights::binary_label_matrix(labels, labels)
   
   ## class push
-  Wd <- compute_between_graph(strata, !!y)
+  if (dweight > 0) {
+    Wd <- compute_between_graph(strata, !!y)
+  } else {
+    Wd <- sparseMatrix(length(labels), length(labels))
+  }
   
   ## reweight graphs
   G <- normalize_graphs(Sl, Ws, Wd)
