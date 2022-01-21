@@ -119,17 +119,20 @@ compute_local_similarity <- function(strata, y, knn, weight_mode, type, sigma) {
 }
 
 compute_laplacians <- function(Ws, Wr, W, Wd, normalize=FALSE) {
+  ## class graph
   Ds <- Matrix::Diagonal(x=Matrix::rowSums(Ws))
   Ls <- Ds - Ws
  
-    
+  
+  ## repulsion laplacian  
   Dr <- Matrix::Diagonal(x=Matrix::rowSums(Wr))
   Lr <- Dr - Wr
   
-    
+  ## Data laplacian  
   D <- Matrix::Diagonal(x=Matrix::rowSums(W))
   L <- D - W
   
+  ## anti-class graph
   Dd <- Matrix::Diagonal(x=Matrix::rowSums(Wd))
   Ld <- Dd - Wd
   
@@ -183,7 +186,11 @@ compute_kernels <- function(strata, kernel, sample_frac) {
   Ks
 }
 
+## Sl: data similarity graph
+## Ws: class graph
+## Wd: repulsion graph
 normalize_graphs <- function(Sl, Ws, Wd) {
+  
   diag(Ws) <- 0
   
   
@@ -227,7 +234,7 @@ kema.multidesign <- function(data, y,
   subject_set <- levels(subjects)
   
   strata <- multidesign::hyperdesign(split(data, subject))
-  kema(strata, !!y, preproc, ncomp, knn, sigma, u, kernel, sample_frac, use_laplacian,specreg, dweight)
+  kema(strata, !!y, preproc, ncomp, knn, sigma, u, kernel, sample_frac, use_laplacian, specreg, dweight)
 
  
 }
@@ -243,7 +250,8 @@ kema.hyperdesign <- function(data, y,
                              sample_frac=1,
                              use_laplacian=TRUE, 
                              specreg=TRUE,
-                             dweight=.1) {
+                             dweight=.1,
+                             rweight=0){
   
   chk::chk_number(ncomp)
   chk::chk_range(sample_frac, c(0,1))
@@ -272,11 +280,13 @@ kema.hyperdesign <- function(data, y,
   proc <- multivarious::concat_pre_processors(proclist, block_indices)
   names(block_indices) <- names(pdata)
   
-  kema_fit(pdata, proc, ncomp, knn, sigma, u, !!y, labels, kernel, sample_frac, specreg, dweight, block_indices)
+  kema_fit(pdata, proc, ncomp, knn, sigma, u, !!y, labels, kernel, sample_frac, 
+           specreg, dweight, rweight, block_indices)
   
 }
 
-kema_fit <- function(strata, proc, ncomp, knn, sigma, u, y, labels, kernel, sample_frac, specreg, dweight, block_indices) {
+kema_fit <- function(strata, proc, ncomp, knn, sigma, u, y, labels, kernel, sample_frac, 
+                     specreg, dweight, rweight, block_indices) {
   chk::chk_number(ncomp)
   chk::chk_range(sample_frac, c(0,1))
   chk::chk_logical(specreg)
@@ -291,6 +301,7 @@ kema_fit <- function(strata, proc, ncomp, knn, sigma, u, y, labels, kernel, samp
                                  type="normal",  
                                  sigma=sigma)
   
+  
   ## class pull
   Ws <- neighborweights::binary_label_matrix(labels, labels)
   
@@ -298,7 +309,7 @@ kema_fit <- function(strata, proc, ncomp, knn, sigma, u, y, labels, kernel, samp
   Wd <- compute_between_graph(strata, !!y)
   
   ## reweight graphs
-  G <- normalize_graphs(Sl,Ws, Wd)
+  G <- normalize_graphs(Sl, Ws, Wd)
   
   ## compute full or subsampled kernels
   Ks <- compute_kernels(strata, kernel, sample_frac)
@@ -308,7 +319,7 @@ kema_fit <- function(strata, proc, ncomp, knn, sigma, u, y, labels, kernel, samp
   ## compute laplacians
   Lap <- compute_laplacians(G$Ws,G$Wr,G$W,G$Wd, specreg)
   
-  kemfit <- kema_solve(strata, Z, Ks, Lap, kernel_indices, specreg, ncomp, u, dweight, sample_frac)
+  kemfit <- kema_solve(strata, Z, Ks, Lap, kernel_indices, specreg, ncomp, u, dweight, rweight, sample_frac)
 
   multivarious::multiblock_biprojector(
     v=kemfit$coef,
@@ -327,9 +338,9 @@ kema_fit <- function(strata, proc, ncomp, knn, sigma, u, y, labels, kernel, samp
 
 
 #' @import glmnet
-kema_solve <- function(strata, Z, Ks, Lap, kernel_indices, specreg, ncomp, u, dweight, sample_frac, lambda=.0001) {
+kema_solve <- function(strata, Z, Ks, Lap, kernel_indices, specreg, ncomp, u, dweight, rweight, sample_frac, lambda=.0001) {
   if (specreg) {
-    A <- Lap$Ls - dweight*(Lap$Lr + Lap$Ld)
+    A <- Lap$Ls - (rweight*Lap$Lr + dweight*Lap$Ld)
     decomp <- PRIMME::eigs_sym(u*Lap$L + (1-u)*A, NEig=ncomp+1, which="SA")
     Y <- decomp$vectors[,1:ncomp]
     
