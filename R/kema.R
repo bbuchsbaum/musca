@@ -226,7 +226,8 @@ kema.multidesign <- function(data, y,
                              sample_frac=1,
                              use_laplacian=TRUE, 
                              specreg=TRUE,
-                             dweight=.1) {
+                             dweight=.1,
+                             rweight=0) {
   
   subject <- rlang::enquo(subject)
   y <- rlang::enquo(y)
@@ -234,7 +235,7 @@ kema.multidesign <- function(data, y,
   subject_set <- levels(subjects)
   
   strata <- multidesign::hyperdesign(split(data, subject))
-  kema(strata, !!y, preproc, ncomp, knn, sigma, u, kernel, sample_frac, use_laplacian, specreg, dweight)
+  kema(strata, !!y, preproc, ncomp, knn, sigma, u, kernel, sample_frac, use_laplacian, specreg, dweight, rweight)
 
  
 }
