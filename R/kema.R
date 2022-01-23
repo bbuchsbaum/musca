@@ -272,7 +272,8 @@ kema.hyperdesign <- function(data, y,
                              use_laplacian=TRUE, 
                              specreg=TRUE,
                              dweight=.1,
-                             rweight=0){
+                             rweight=0,
+                             simfun=neighborweights::binary_label_matrix) {
   
   chk::chk_number(ncomp)
   chk::chk_range(sample_frac, c(0,1))
@@ -302,12 +303,12 @@ kema.hyperdesign <- function(data, y,
   names(block_indices) <- names(pdata)
   
   kema_fit(pdata, proc, ncomp, knn, sigma, u, !!y, labels, kernel, sample_frac, 
-           specreg, dweight, rweight, block_indices)
+           specreg, dweight, rweight, block_indices, simfun)
   
 }
 
 kema_fit <- function(strata, proc, ncomp, knn, sigma, u, y, labels, kernel, sample_frac, 
-                     specreg, dweight, rweight, block_indices) {
+                     specreg, dweight, rweight, block_indices, simfun) {
   chk::chk_number(ncomp)
   chk::chk_range(sample_frac, c(0,1))
   chk::chk_logical(specreg)
@@ -326,7 +327,7 @@ kema_fit <- function(strata, proc, ncomp, knn, sigma, u, y, labels, kernel, samp
   
   
   ## class pull
-  Ws <- neighborweights::binary_label_matrix(labels, labels)
+  Ws <- simfun(labels)
   
   ## class push
   if (dweight > 0) {
@@ -368,6 +369,7 @@ kema_fit <- function(strata, proc, ncomp, knn, sigma, u, y, labels, kernel, samp
 #' @import glmnet
 kema_solve <- function(strata, Z, Ks, Lap, kernel_indices, specreg, ncomp, u, dweight, rweight, sample_frac, lambda=.0001) {
   if (specreg) {
+    
     A <- Lap$Ls - (rweight*Lap$Lr + dweight*Lap$Ld)
     decomp <- PRIMME::eigs_sym(u*Lap$L + (1-u)*A, NEig=ncomp+1, which="SA")
     Y <- decomp$vectors[,1:ncomp]
