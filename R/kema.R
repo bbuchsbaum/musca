@@ -134,7 +134,6 @@ compute_laplacians <- function(Ws, Wr, W, Wd, normalize=FALSE) {
   Ds <- Matrix::Diagonal(x=Matrix::rowSums(Ws))
   Ls <- Ds - Ws
  
-  
   ## repulsion laplacian  
   Dr <- Matrix::Diagonal(x=Matrix::rowSums(Wr))
   Lr <- Dr - Wr
@@ -161,22 +160,29 @@ compute_laplacians <- function(Ws, Wr, W, Wd, normalize=FALSE) {
   
 }
 
-compute_between_graph <- function(strata, y) {
+compute_between_graph <- function(strata, y, dfun=NULL) {
   y <- rlang::enquo(y)
   
-  dlabels <- lapply(strata, function(s) {
-    labs <- s$design %>% select(!!y) %>% pull(!!y)
+  if (is.null(dfun)) {
+    dlabels <- lapply(strata, function(s) {
+      labs <- s$design %>% select(!!y) %>% pull(!!y)
     
-    ## find the medoid member of each class
-    meds <- sort(class_medoids(s$x, labs))
+      ## find the medoid member of each class
+      meds <- sort(class_medoids(s$x, labs))
     
-    medlabels <- rep(NA, length(labs))
-    medlabels[meds] <- names(meds)
-    medlabels
-  })
-  
-  neighborweights::binary_label_matrix(unlist(dlabels), unlist(dlabels), type="d")
-  
+      medlabels <- rep(NA, length(labs))
+      medlabels[meds] <- names(meds)
+      medlabels
+    })
+    neighborweights::binary_label_matrix(unlist(dlabels), unlist(dlabels), type="d")
+  } else {
+    dlabels <- unlist(lapply(strata, function(s) {
+      s$design %>% select(!!y) %>% pull(!!y)
+    }))
+    
+    dfun(dlabels)
+  }
+    
 }
 
 compute_kernels <- function(strata, kernel, sample_frac) {
@@ -247,7 +253,9 @@ kema.multidesign <- function(data, y,
                              use_laplacian=TRUE, 
                              specreg=TRUE,
                              dweight=.1,
-                             rweight=0) {
+                             rweight=0,
+                             simfun=neighborweights::binary_label_matrix,
+                             disfun=NULL) {
   
   subject <- rlang::enquo(subject)
   y <- rlang::enquo(y)
@@ -255,7 +263,8 @@ kema.multidesign <- function(data, y,
   subject_set <- levels(subjects)
   
   strata <- multidesign::hyperdesign(split(data, subject))
-  kema(strata, !!y, preproc, ncomp, knn, sigma, u, kernel, sample_frac, use_laplacian, specreg, dweight, rweight)
+  kema(strata, !!y, preproc, ncomp, knn, sigma, u, kernel, sample_frac, 
+       use_laplacian, specreg, dweight, rweight,disfun)
 
  
 }
@@ -273,7 +282,8 @@ kema.hyperdesign <- function(data, y,
                              specreg=TRUE,
                              dweight=.1,
                              rweight=0,
-                             simfun=neighborweights::binary_label_matrix) {
+                             simfun=neighborweights::binary_label_matrix,
+                             disfun=NULL) {
   
   chk::chk_number(ncomp)
   chk::chk_range(sample_frac, c(0,1))
@@ -303,12 +313,12 @@ kema.hyperdesign <- function(data, y,
   names(block_indices) <- names(pdata)
   
   kema_fit(pdata, proc, ncomp, knn, sigma, u, !!y, labels, kernel, sample_frac, 
-           specreg, dweight, rweight, block_indices, simfun)
+           specreg, dweight, rweight, block_indices, simfun, disfun)
   
 }
 
 kema_fit <- function(strata, proc, ncomp, knn, sigma, u, y, labels, kernel, sample_frac, 
-                     specreg, dweight, rweight, block_indices, simfun) {
+                     specreg, dweight, rweight, block_indices, simfun, disfun) {
   chk::chk_number(ncomp)
   chk::chk_range(sample_frac, c(0,1))
   chk::chk_logical(specreg)
@@ -331,7 +341,7 @@ kema_fit <- function(strata, proc, ncomp, knn, sigma, u, y, labels, kernel, samp
   
   ## class push
   if (dweight > 0) {
-    Wd <- compute_between_graph(strata, !!y)
+    Wd <- compute_between_graph(strata, !!y, disfun)
   } else {
     Wd <- sparseMatrix(length(labels), length(labels))
   }
@@ -358,8 +368,9 @@ kema_fit <- function(strata, proc, ncomp, knn, sigma, u, y, labels, kernel, samp
     alpha=kemfit$vectors,
     block_indices=block_indices,
     Ks=Ks,
-    sample_frac,
+    sample_frac=sample_frac,
     dweight=dweight,
+    rweight=rweight,
     labels=labels,
     classes="kema"
   )
