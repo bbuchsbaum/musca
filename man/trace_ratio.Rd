@@ -14,7 +14,12 @@ trace_ratio(A, B, ncomp = 2, eps = 1e-06, maxiter = 100)
 \description{
 trace_ratio optimization
 }
-\keyword{2012}
-\keyword{Ngo}
-\keyword{al}
-\keyword{et}
+\examples{
+data(iris)
+X <- as.matrix(iris[,1:4])
+Y <- iris[,5]
+A <- between_class_scatter(X, Y, colMeans(X))
+B <- within_class_scatter(X, Y)
+ret <- trace_ratio(A,B, ncomp=3)
+}
+\keyword{internal}

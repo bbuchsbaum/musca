@@ -87,6 +87,7 @@ covstatis.list <- function(data, ncomp=2, normalize=TRUE, dcenter=TRUE, labels=N
   ret <- multivarious::projector(fit$vectors[,keep,drop=FALSE], classes="covstatis", 
                                  s=scores,
                                  projmat=projmat,
+                                 sdev=sqrt(fit$values[keep]),
                                  normalize=normalize, dcenter=dcenter, alpha=alpha, C=C,
                                  block_labels=block_labels, labels=labels)
   ret
@@ -107,5 +108,10 @@ project_cov.covstatis <- function(x, new_data) {
   } 
   
   new_data %*% x$projmat
+  ##cov_data_recon <- purrr::map(Cs, ~ t(pc_candi) %*% . %*% pc_candi)
+}
+
+reconstruct.covstatis <- function(x, comp=1:x$ncomp) {
+  
 }
 

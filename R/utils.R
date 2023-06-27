@@ -19,10 +19,11 @@ get_block_indices <- function(Xlist, byrow=FALSE) {
 #' @param A the numerator matrix
 #' @param B the denominator matrix
 #' 
-#' @keywords 
+#' @keywords internal
 #' 
-#' 2012 Ngo et al 
+#' 
 #' @export
+#' @examples
 #' data(iris)
 #' X <- as.matrix(iris[,1:4])
 #' Y <- iris[,5]

@@ -7,9 +7,9 @@
 \method{project}{bada}(x, new_data, block)
 }
 \arguments{
-\item{x}{the model fit}
+\item{x}{The model fit, typically an object of class bi_projector or any other class that implements a project method}
 
-\item{new_data}{a matrix or vector of new observations(s) with the same number of columns as the original data.}
+\item{new_data}{A matrix or vector of new observations with the same number of columns as the original data. Rows represent observations and columns represent variables}
 
 \item{block}{the \code{character} id for the subject/block to project on.
 This is required for block-specific pre-processing.

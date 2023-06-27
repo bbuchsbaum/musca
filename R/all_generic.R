@@ -65,7 +65,7 @@ mfa <- function(data, preproc, ncomp, normalization, A, M) UseMethod("mfa")
 #' @param kernel the kernel function (e.g. `rbfdot` or any other kernel function from `kernlab` package)
 #' @param sample_frac the fraction of samples to use during estimation 
 #' @param dweight the weight to place on the "repulsion" graph
-#' @param 
+#' @param ... extra args
 kema <- function(data, y, preproc, ncomp, knn, sigma, u, kernel, sample_frac, dweight, ...) UseMethod("kema")
 
 #' project covariance matrix
