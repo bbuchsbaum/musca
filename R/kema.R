@@ -321,7 +321,7 @@ kema.hyperdesign <- function(data, y,
 }
 
 
-#' @internal
+#' @keywords internal
 #' @noRd
 kema_fit <- function(strata, proc, ncomp, knn, sigma, u, y, labels, kernel, sample_frac, 
                      specreg, dweight, rweight, block_indices, simfun, disfun, lambda) {
