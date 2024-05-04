@@ -1,4 +1,6 @@
 
+
+#' @noRd
 between_class_scatter <- function(X, Y, mu) {
   p <- ncol(X)
   Y <- droplevels(Y)
@@ -17,7 +19,7 @@ between_class_scatter <- function(X, Y, mu) {
   
 }
 
-
+#' @noRd
 pooled_scatter <- function(X, Y) {
   ina <- as.integer(droplevels(Y))
   s <- crossprod(X)
@@ -29,6 +31,7 @@ pooled_scatter <- function(X, Y) {
   s
 }
 
+#' @noRd
 within_class_scatter <- function(X, Y) {
   pooled_scatter(X,Y)
 }

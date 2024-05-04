@@ -35,6 +35,9 @@ normalization_factors <- function(blocks, type=c("MFA", "RV", "RV2", "None", "Fr
   }
 }
 
+
+#' @inheritParams mfa.multiblock
+#' @export
 mfa.list <- function(data, preproc=center(), ncomp=2,
                      normalization=c("MFA", "RV", "None", "Frob", "custom"), 
                      M=NULL, A=NULL, ...) {
@@ -43,12 +46,12 @@ mfa.list <- function(data, preproc=center(), ncomp=2,
 }
 
 
-#' multiple factor analysis
+#' Multiple factor analysis
 #' 
 #' principal component analysis for multiple blocks of data collected over th same instances
 #' 
 #' 
-#' @param X a \code{block_matrix} object
+#' @param data a \code{multiblock} object
 #' @param ncomp the number of components to estimate
 #' @param preproc a preprocessing pipeline, default is `center()`
 #' @param normalization the normalization method: MFA, RV, RV-MFA, or None (see details).

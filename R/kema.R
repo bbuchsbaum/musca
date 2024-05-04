@@ -5,7 +5,7 @@
 #  Y <- decomp$vectors[,1:ncomp]
 #}
 
-
+#' @keywords internal
 rescale <- function(z) {
   t(apply(z,1, function(x) x/sqrt(sum(x^2))))
 }
@@ -100,7 +100,7 @@ class_medoids <- function(X, L) {
 
 
 
-
+#' @noRd
 compute_local_similarity <- function(strata, y, knn, weight_mode, type, sigma, repulsion=TRUE) {
   y <- rlang::enquo(y)
   Sl <- purrr::map(strata, function(x) {
@@ -129,6 +129,7 @@ compute_local_similarity <- function(strata, y, knn, weight_mode, type, sigma, r
   
 }
 
+#' @keywords internal
 compute_laplacians <- function(Ws, Wr, W, Wd, normalize=FALSE) {
   ## class graph
   Ds <- Matrix::Diagonal(x=Matrix::rowSums(Ws))
@@ -160,6 +161,7 @@ compute_laplacians <- function(Ws, Wr, W, Wd, normalize=FALSE) {
   
 }
 
+#' @keywords internal
 compute_between_graph <- function(strata, y, dfun=NULL) {
   y <- rlang::enquo(y)
   
@@ -185,6 +187,7 @@ compute_between_graph <- function(strata, y, dfun=NULL) {
     
 }
 
+#' @keywords internal
 compute_kernels <- function(strata, kernel, sample_frac) {
   Ks <- if (sample_frac == 1) {
     purrr::map(strata, function(x) {
@@ -280,10 +283,11 @@ kema.hyperdesign <- function(data, y,
                              sample_frac=1,
                              use_laplacian=TRUE, 
                              specreg=TRUE,
-                             dweight=.1,
+                             dweight=0,
                              rweight=0,
                              simfun=neighborweights::binary_label_matrix,
-                             disfun=NULL) {
+                             disfun=NULL,
+                             lambda=.0001) {
   
   chk::chk_number(ncomp)
   chk::chk_range(sample_frac, c(0,1))
@@ -295,7 +299,6 @@ kema.hyperdesign <- function(data, y,
   
   y <- rlang::enquo(y)
   
-  #browser()
   labels <- factor(unlist(purrr::map(data, function(x) x$design %>% select(!!y) %>% pull(!!y))))
   label_set <- levels(labels)
   
@@ -313,12 +316,15 @@ kema.hyperdesign <- function(data, y,
   names(block_indices) <- names(pdata)
   
   kema_fit(pdata, proc, ncomp, knn, sigma, u, !!y, labels, kernel, sample_frac, 
-           specreg, dweight, rweight, block_indices, simfun, disfun)
+           specreg, dweight, rweight, block_indices, simfun, disfun, lambda)
   
 }
 
+
+#' @internal
+#' @noRd
 kema_fit <- function(strata, proc, ncomp, knn, sigma, u, y, labels, kernel, sample_frac, 
-                     specreg, dweight, rweight, block_indices, simfun, disfun) {
+                     specreg, dweight, rweight, block_indices, simfun, disfun, lambda) {
   chk::chk_number(ncomp)
   chk::chk_range(sample_frac, c(0,1))
   chk::chk_logical(specreg)
@@ -358,7 +364,7 @@ kema_fit <- function(strata, proc, ncomp, knn, sigma, u, y, labels, kernel, samp
   Lap <- compute_laplacians(G$Ws,G$Wr,G$W,G$Wd, specreg)
   
   kemfit <- kema_solve(strata, Z, Ks, Lap, kernel_indices, specreg, ncomp, u, 
-                       dweight, rweight, sample_frac)
+                       dweight, rweight, sample_frac, lambda)
 
   multivarious::multiblock_biprojector(
     v=kemfit$coef,
@@ -378,16 +384,25 @@ kema_fit <- function(strata, proc, ncomp, knn, sigma, u, y, labels, kernel, samp
 
 
 #' @import glmnet
-kema_solve <- function(strata, Z, Ks, Lap, kernel_indices, specreg, ncomp, u, dweight, rweight, sample_frac, lambda=.0001) {
+kema_solve <- function(strata, Z, Ks, Lap, kernel_indices, specreg, ncomp, u, dweight, rweight, sample_frac, lambda=NULL) {
   if (specreg) {
     
     A <- Lap$Ls - (rweight*Lap$Lr + dweight*Lap$Ld)
     decomp <- PRIMME::eigs_sym(u*Lap$L + (1-u)*A, NEig=ncomp+1, which="SA")
     Y <- decomp$vectors[,1:ncomp]
-    
+    Z <- as(Z, "dgCMatrix")
     if (sample_frac < 1) {
+      if (is.null(lambda)) {
+        cvfit <- cv.glmnet(t(Z), Y, family = "mgaussian", alpha=0)
+        lambda <- cvfit$lambda.min
+      }
       rfit <- glmnet(t(Z), Y, family = "mgaussian", alpha=0, lambda=lambda)
     } else {
+      
+      if (is.null(lambda)) {
+        cvfit <- cv.glmnet(Z, Y, family = "mgaussian", alpha=0)
+        lambda <- cvfit$lambda.min
+      }
       rfit <- glmnet(Z, Y, family = "mgaussian", alpha=0, lambda=lambda)
     }
     cfs <- coef(rfit)

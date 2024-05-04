@@ -2,7 +2,7 @@
 % Please edit documentation in R/mfa.R
 \name{mfa.multiblock}
 \alias{mfa.multiblock}
-\title{multiple factor analysis}
+\title{Multiple factor analysis}
 \usage{
 \method{mfa}{multiblock}(
   data,
@@ -15,6 +15,8 @@
 )
 }
 \arguments{
+\item{data}{a \code{multiblock} object}
+
 \item{preproc}{a preprocessing pipeline, default is \code{center()}}
 
 \item{ncomp}{the number of components to estimate}
@@ -24,8 +26,6 @@
 \item{M}{when \code{normalization} is \code{custom}, a weight (sparse or dense) matrix for the rows}
 
 \item{A}{when \code{normalization} is \code{custom}, a weight (sparse or dense) matrix for the columns}
-
-\item{X}{a \code{block_matrix} object}
 }
 \description{
 principal component analysis for multiple blocks of data collected over th same instances

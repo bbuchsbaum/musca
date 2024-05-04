@@ -7,6 +7,10 @@ Authors@R:
            role = c("aut", "cre"),
            email = "first.last@example.com",
            comment = c(ORCID = "YOUR-ORCID-ID"))
+LinkingTo:
+  Rcpp,
+  RcppArmadillo,
+  roptim
 Description: What the package does (one paragraph).
 License: `use_mit_license()`, `use_gpl3_license()` or friends to
     pick a license
@@ -15,6 +19,9 @@ LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3
 Imports:
+  Rcpp (>= 1.0.0),
+  RcppArmadillo,
+  roptim,
   multivarious,
   genpca,
   dplyr,
@@ -29,3 +36,6 @@ Remotes:
   bbuchsbaum/genpca,
   bbuchsbaum/multidesign,
   bbuchsbaum/deflist
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3

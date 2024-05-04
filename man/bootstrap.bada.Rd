@@ -4,7 +4,7 @@
 \alias{bootstrap.bada}
 \title{Bootstrap Resampling for bada Multivariate Models}
 \usage{
-\method{bootstrap}{bada}(x, data, nboot = 500, ...)
+\method{bootstrap}{bada}(x, data, nboot = 500, alpha = 0.05, ...)
 }
 \arguments{
 \item{x}{A fitted bada model object that has been fit to a training dataset.}
